@@ -5,6 +5,7 @@ from typing import List, Dict
 import isodate
 from datetime import datetime
 import logging
+import json
 
 
 def available_games() -> List:
@@ -75,6 +76,7 @@ def generate_scores_report() -> List:
     for id in game_ids:
         game_data = {}
         # Extract boxscore data from players
+        game_data["sport"] = "nba"
         player_data = get_game_player_data(id)
         game_data["game_id"] = id
         game_data["boxscore"] = {"home": player_data[0], "away": player_data[1]}
@@ -91,7 +93,7 @@ def get_scores_nba(id: str) -> Dict:
 
     Args:
         id (str): ID for the game data is pulled from
-
+        
     Returns:
         Dictionary of the quarter data
     """
