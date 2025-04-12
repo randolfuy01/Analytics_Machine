@@ -1,4 +1,3 @@
-import requests
 import json
 from kafka import KafkaProducer
 from api.nba import generate_scores_report
@@ -24,3 +23,7 @@ def send_kafka_data():
                 producer.send("nba-scores", game)
             except ValidationError as e:
                 logging.warning(f"Skipping bad record: {e.message}")
+
+
+if __name__ == "__main__":
+    send_kafka_data()

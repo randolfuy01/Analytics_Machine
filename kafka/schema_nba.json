@@ -51,7 +51,7 @@
           "Status": { "type": "string" }
         },
         "patternProperties": {
-          "^Q[1-4] (Home|Away)$": { "type": "string" }
+          "^Q[1-4] (Home|Away)$": { "type": "integer" }
         },
         "required": ["Home Team", "Away Team", "Final Score", "Status"]
       }
