@@ -10,6 +10,7 @@ load_dotenv()
 POSTGRES_USER = os.getenv("Postgres_user")
 POSTGRES_PASS = os.getenv("Postgres_password")
 
+
 consumer = KafkaConsumer(
     "nba-scores",
     bootstrap_servers="localhost:9092",
@@ -30,12 +31,6 @@ redis_cache = redis.Redis(
     decode_responses=True,
 )
 
-validation_queries = [
-    "SELECT game.id FROM game WHERE game.id = %s;",
-    "SELECT team.tname FROM team WHERE team.tname = %s;",
-    "SELECT player.pname FROM player WHERE player.pname = %s;",
-]
-
 
 def consume():
     """Consume the kafka messages, cache the events within redis until the event is finished."""
@@ -53,61 +48,81 @@ def consume():
 
 
 def load_data(message):
+    """Validate and load data into the database
+
+    Args:
+        message (payload): data based on schema
+
+    Returns:
+        None
+    """
     try:
-        with postgres_connection.cursor() as curs:
-            # If game already exists, alert the system
-            if game_validation(message):
-                logging.log(f"Game {message["game_id"]} already exists")
-            validate_players = True
-            for player in message["boxscore"]["home"]:
-                validate_players = validate_players and player_validation(
-                    player["name"], message[""]
-                )
-    except Exception as e:
-        logging.log(f"Error loading data into database: {e}")
+        # Create cursor to interact with db
+        cur = postgres_connection.cursor()
 
+        # Validate if the game is already in db
+        if game_validation(cur, message["game_id"]):
+            logging.log(
+                f"Inserting database into the database for game {message["game_id"]}"
+            )
+            insert_game(cur, message)
 
-def game_validation(message) -> bool:
-    """Game Validation, check if game id already exists
-
-    Args:
-        message (None): payload
-
-    Returns:
-        bool: return false if the game is logged
-    """
-    cur = postgres_connection.cursor()
-    cur.execute(validation_queries[0], message["game_id"])
-    result = cur.fetchone()
-    game_validation = result is not None
-    cur.close()
-    return not game_validation
-
-
-def player_validation(player, team: str) -> bool:
-    """Player Validation, check if player already exists with team and name
-
-    Args:
-        team (None): player payload
-        team (Str): team player plays for
-    Returns:
-        bool: return false if the player already exists
-    """
-    cur = postgres_connection.cursor()
-    cur.execute(validation_queries[2], player["player_name"], player["pname"])
-    cur.execute(
         """
-                SEELCT COUNT(*)
-                FROM player
-                JOIN team ON player.team_id = %s
-                WHERE team_tname = %s AND player.pname = %s
-                """,
-        player["name"],
-        team,
-    )
-    result = cur.fetchone()
-    player_validation = result is not None
-    return not player_validation
+        Validate team data
+        If team not in db, insert new team
+        """
+        home = " ".join(message["game_data"]["home"].split(" ")[1:])
+        away = " ".join(message["game_data"]["away"].split(" ")[1:])
+        if team_validation(cur, home) == False:
+            insert_team(cur, home)
+        if team_validation(cur, away) == False:
+            insert_team(cur, away)
+
+        """
+        Validate player data
+        If player not in db, insert new player
+        """
+        for player in message["boxscore"]["home"]:
+            if player_validation(cur) == False:
+                insert_player(cur)
+
+        for player in message["boxscore"]["away"]:
+            if player_validation(cur) == False:
+                insert_player(cur)
+        """ 
+        Validate game data and insert game specific data
+        """
+
+    except Exception as e:
+        logging.error(f"Error with payload for game {message["game_id"]}")
+    finally:
+        cur.close()
+
+
+def player_validation(cur) -> bool:
+    return
+
+
+def insert_player(cur) -> bool:
+    return
+
+
+def game_validation(cur, game_id) -> bool:
+    cur.execute("SELECT id FROM game WHERE id = %s;", (game_id,))
+    return cur.fetchone() is None
+
+
+def team_validation(cur, mascot) -> bool:
+    cur.execute("SELECT mascot FROM team WHERE id = %s;"(mascot))
+    return cur.fetchone() is None
+
+
+def insert_team(cur, team):
+    pass
+
+
+def insert_game(cur, message):
+    pass
 
 
 if __name__ == "__main__":
