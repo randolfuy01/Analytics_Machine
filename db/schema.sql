@@ -4,61 +4,64 @@
 \c postgres;
 
 -- Drop current database
-DROP DATABASE IF EXISTS Analytics;
+DROP DATABASE IF EXISTS analytics;
 
 -- Create database
-CREATE DATABASE Analytics;
+CREATE DATABASE analytics;
 
 -- Connect to database
-\c Analytics;
+\c analytics;
 
 -- Create 'Game' Table
-CREATE TABLE Game (
-    ID int NOT NULL PRIMARY KEY,
-    game_date date,
-    game_location int
+CREATE TABLE game (
+    id INT NOT NULL PRIMARY KEY,
+    game_date DATE,
+    game_location INT
 );
 
 -- Create 'Team' Table
-CREATE TABLE Team (
-    ID int SERIAL PRIMARY KEY,
-    City varchar(255),
-    Team_name varchar(255)
+CREATE TABLE team (
+    id SERIAL PRIMARY KEY,
+    city VARCHAR(255),
+    tname VARCHAR(255)
 );
 
 -- Create 'Score' Table
-CREATE TABLE Score (
-    ID SERIAL PRIMARY KEY,
-    Game_ID int NOT NULL,
-    Team_ID int NOT NULL,
-    Game_Period int,
-    Period_score int,
-    FOREIGN KEY (Game_ID) REFERENCES Game(ID) ON DELETE CASCADE,
-    FOREIGN KEY (Team_ID) REFERENCES Team(ID) ON DELETE CASCADE
+CREATE TABLE score (
+    id SERIAL PRIMARY KEY,
+    game_id INT NOT NULL,
+    team_id INT NOT NULL,
+    game_period INT,
+    period_score INT,
+    FOREIGN KEY (game_id) REFERENCES game(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
 );
 
 -- Create enumeration for the player position
 CREATE TYPE player_position AS ENUM ('PG', 'SG', 'SF', 'PF', 'C');
 
 -- Create 'Player' Table
-CREATE TABLE Player (
-    ID int SERIAL PRIMARY KEY,
-    Team_ID int NOT NULL,
-    Position player_position,
-    Jersey int,
-    FOREIGN KEY (Team_ID) REFERENCES Team(ID) ON DELETE CASCADE
+CREATE TABLE player (
+    id SERIAL PRIMARY KEY, 
+    team_id INT NOT NULL,
+    pname VARCHAR(255),
+    position player_position,
+    jersey INT,
+    FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE,
+    CONSTRAINT unique_team_player UNIQUE (team_id, pname)
 );
 
+
 -- Create 'Stat' Table
-CREATE TABLE Stat (
-    ID int SERIAL PRIMARY KEY,
-    Player_ID int NOT NULL,
-    Game_ID int NOT NULL,
-    Points int,
-    Rebounds int,
-    Assists int,
-    Blocks int,
-    Minutes_played int,
-    FOREIGN KEY (Player_ID) REFERENCES Player(ID) ON DELETE CASCADE,
-    FOREIGN KEY (Game_ID) REFERENCES Game(ID) ON DELETE CASCADE
+CREATE TABLE stat (
+    id INT SERIAL PRIMARY KEY,
+    player_id INT NOT NULL,
+    game_id INT NOT NULL,
+    points INT,
+    rebounds INT,
+    assists INT,
+    blocks INT,
+    minutes_played INT,
+    FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE,
+    FOREIGN KEY (game_id) REFERENCES game(id) ON DELETE CASCADE
 );

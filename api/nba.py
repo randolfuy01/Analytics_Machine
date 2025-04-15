@@ -5,7 +5,6 @@ from typing import List, Dict
 import isodate
 from datetime import datetime
 import logging
-import json
 
 
 def available_games() -> List:
