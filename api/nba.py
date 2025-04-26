@@ -82,8 +82,9 @@ def generate_scores_report() -> List:
 
         # Extract Game data
         live_scores = get_scores_nba(id)
-        game_data["Scores"] = live_scores
+        game_data["game_data"] = live_scores
         report.append(game_data)
+        
     return report
 
 
@@ -102,15 +103,14 @@ def get_scores_nba(id: str) -> Dict:
     away = game_data["awayTeam"]
 
     data = {
-        "Home Team": f"{home['teamCity']} {home['teamName']}",
-        "Away Team": f"{away['teamCity']} {away['teamName']}",
-        "Final Score": f"{home['score']} - {away['score']}",
-        "Status": game_data["gameStatusText"],
+        "home": f"{home['teamCity']} {home['teamName']}",
+        "away": f"{away['teamCity']} {away['teamName']}",
+        "status": game_data["gameStatusText"],
     }
 
     # Add quarter breakdown
     for i, period in enumerate(home["periods"], 1):
         home_score = period["score"]
         away_score = away["periods"][i - 1]["score"]
-        data[f"Q{i} Home"], data[f"Q{i} Away"] = home_score, away_score
+        data[f"Q{i}_home"], data[f"Q{i}_away"] = home_score, away_score
     return data

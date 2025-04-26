@@ -2,9 +2,12 @@ from kafka import KafkaConsumer
 import json
 import logging
 import psycopg2
+from psycopg2.extensions import cursor
 import os
 from dotenv import load_dotenv
 import redis
+import datetime
+
 
 load_dotenv()
 POSTGRES_USER = os.getenv("Postgres_user")
@@ -60,36 +63,51 @@ def load_data(message):
         # Create cursor to interact with db
         cur = postgres_connection.cursor()
 
-        # Validate if the game is already in db
-        if not game_validation(cur, message["game_id"]):
-            logging.log(
-                f"Inserting database into the database for game {message["game_id"]}"
-            )
-            insert_game(cur, message)
+
+        """
+        Validate game data
+        Game should not be a duplicate of another game
+            -> If validation runs True, game does not exist hence we can insert
+        """
+        game_validation = validate_game(cur, message["game_id"])
+        if game_validation:
+            insert_game(cur, message["game_id"])
+
 
         """
         Validate team data
         If team not in db, insert new team
         """
-        home = " ".join(message["game_data"]["home"].split(" ")[1:])
-        away = " ".join(message["game_data"]["away"].split(" ")[1:])
-        if not team_validation(cur, home):
-            insert_team(cur, home)
-        if not team_validation(cur, away):
-            insert_team(cur, away)
+        home_parts = message["game_data"]["home"].split(" ")
+        away_parts = message["game_data"]["away"].split(" ")
 
+        home_city = " ".join(home_parts[:-1])
+        away_city = " ".join(home_parts[:-1])
+
+        home_mascot = home_parts[-1]
+        away_mascot = away_parts[-1]
+
+        home_team_validation = validate_team(cur, home_mascot)
+        away_team_validation = validate_team(cur, away_mascot)
+
+        if not home_team_validation:
+            insert_team(cur, home_city, home_mascot)
+        if not away_team_validation:
+            insert_team(cur, away_city, away_mascot)
+          
+            
         """
         Validate player data
         If player not in db, insert new player
         """
-        for player in message["boxscore"]["home"]:
-            if not player_validation(cur, home, player["pname"]):
-                insert_player(cur)
-
-        for player in message["boxscore"]["away"]:
-            if not player_validation(cur, home, player["pname"]):
-                insert_player(cur)
-
+        home_players = message["boxscore"]["home"]
+        away_players = message["boxscore"]["away"]
+        for player in home_players:
+            # logic
+            pass
+        for player in away_players:
+            # logic
+            pass
         """ 
         Validate game data and insert game specific data
         """
@@ -101,56 +119,75 @@ def load_data(message):
         cur.close()
 
 
-def player_validation(cur, team, player_name) -> bool:
-    try:
-        # Validate the team
-        team_validated = team_validation(team)
-        if team_validated:
-            logging.info(f"Team does not exist: {team}")
-            return False
+def validate_game(cur: cursor, game_id: str) -> bool:
+    """Validate that the game does not exists
 
-        # Validate the player
-        cur.execute("SELECT pname FROM player WHERE pname = %s", (player_name))
-        return cur.fetchone() is None
+    Args:
+        cur (cursor): database connection
+        game_id (str): id for the game being verified
+
+    Returns:
+        bool: True if the game does not exist, False otherwise
+    """
+    try:
+        cur.execute("SELECT game_id FROM game WHERE id = %s;", (game_id,))
+        result = cur.fetchone()
+        if result is None:
+            return True
+        return False
     except Exception as e:
-        logging.error(f"Error with validating player {player_name}: {e}")
+        logging.error(f"Unable to execute query for validating game {game_id}: {e}")
         return False
 
 
-def game_validation(cur, game_id) -> bool:
+def insert_game(cur: cursor, game_id: str):
     try:
-        cur.execute("SELECT id FROM game WHERE id = %s;", (game_id,))
-        return cur.fetchone() is None
-    except Exception as e:
-        logging.error(f"Error with validating game {game_id}: {e}")
-        return False
-
-
-def team_validation(cur, mascot) -> bool:
-    try:
-        cur.execute("SELECT mascot FROM team WHERE id = %s;"(mascot))
-        return cur.fetchone() is None
-    except Exception as e:
-        logging.error(f"Error with validating team {mascot}: {e}")
-        return False
-
-
-def insert_team(cur, team):
-    pass
-
-
-def insert_game(cur, game_id, game_date, game_location):
-    try:
+        date = datetime.today()
         cur.execute(
-            "INSERT INTO game VALUES (%s, %s, %s);", (game_id, game_date, game_location)
+            "INSERT INTO game (id, game_date) VALUES (%s, %s);", (game_id, date)
         )
     except Exception as e:
-        logging.error(f"Error with inserting game {game_id}: {e}")
+        logging.error(f"Unable to execute query for inserting game {game_id}: {e}")
+
+
+def validate_team(cur: cursor, mascot: str) -> bool:
+    """Validate that the current team is within the database
+
+
+    Args:
+        cur (cursor): database connection
+        mascot (str): mascot for the team
+
+    Returns:
+        bool: True if team is found, False otherwise
+    """
+    try:
+        cur.execute("SELECT mascot FROM team WHERE mascot = %s;", (mascot,))
+        result = cur.fetchone()
+        if result is not None and len(result) == 1:
+            return True
+        return False
+    except Exception as e:
+        logging.error(f"Unable to execute query for validating team {mascot}: {e}")
         return False
 
 
-def insert_player(cur):
-    pass
+def insert_team(cur: cursor, team_city: str, mascot: str):
+    """Insert team into database
+
+    Args:
+        cur (cursor): database connection
+        team_city (str): team city
+        mascot (str): team name
+    """
+    try:
+        cur.execute(
+            "INSERT INTO team (city, mascot) VALUES (%s, %s);", (team_city, mascot)
+        )
+    except Exception as e:
+        logging.error(
+            f"Unable to execute query for inserting team {team_city} {mascot}: {e}"
+        )
 
 
 if __name__ == "__main__":

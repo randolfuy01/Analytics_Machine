@@ -1,60 +1,52 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "SingleNBAGameReport",
-  "type": "object",
-  "properties": {
-    "sport": {
-      "type": "string",
-      "enum": ["nba"]
-    },
-    "game_id": {
-      "type": "string"
-    },
-    "boxscore": {
-      "type": "object",
-      "properties": {
-        "home": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string" },
-              "jersey": { "type": "string" },
-              "points": { "type": "integer" },
-              "rebounds": { "type": "integer" },
-              "assists": { "type": "integer" },
-              "steals": { "type": "integer" },
-              "blocks": { "type": "integer" },
-              "minutes": { "type": "number" }
-            },
-            "required": [
-              "name", "jersey", "points", "rebounds",
-              "assists", "steals", "blocks", "minutes"
-            ]
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "boxscore": {
+        "type": "object",
+        "properties": {
+          "away": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/playerStats" }
+          },
+          "home": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/playerStats" }
           }
         },
-        "away": {
-          "type": "array",
-          "items": {
-            "$ref": "#/properties/boxscore/properties/home/items"
-          }
-        }
+        "required": ["away", "home"]
       },
-      "required": ["home", "away"]
+      "game_data": {
+        "type": "object",
+        "patternProperties": {
+          "^Q[1-4]_(away|home)$": { "type": "integer" },
+          "away": { "type": "string" },
+          "home": { "type": "string" },
+          "status": { "type": "string" }
+        },
+        "required": ["away", "home", "status"]
+      },
+      "game_id": { "type": "string" },
+      "sport": { "type": "string" }
     },
-    "game_data": {
+    "required": ["boxscore", "game_data", "game_id", "sport"]
+  },
+  "definitions": {
+    "playerStats": {
       "type": "object",
       "properties": {
-        "home": { "type": "string" },
-        "away": { "type": "string" },
-        "status": { "type": "string" }
+        "name": { "type": "string" },
+        "jersey": { "type": "string" },
+        "minutes": { "type": "integer" },
+        "points": { "type": "integer" },
+        "rebounds": { "type": "integer" },
+        "assists": { "type": "integer" },
+        "steals": { "type": "integer" },
+        "blocks": { "type": "integer" }
       },
-      "patternProperties": {
-        "^Q[1-4]_home$": { "type": "integer" },
-        "^Q[1-4]_away$": { "type": "integer" }
-      },
-      "required": ["home", "away", "status"]
+      "required": ["name", "jersey", "minutes", "points", "rebounds", "assists", "steals", "blocks"]
     }
-  },
-  "required": ["sport", "game_id", "boxscore", "game_data"]
+  }
 }

@@ -14,16 +14,15 @@ CREATE DATABASE analytics;
 
 -- Create 'Game' Table
 CREATE TABLE game (
-    id INT NOT NULL PRIMARY KEY,
+    id VARCHAR(30) NOT NULL PRIMARY KEY,
     game_date DATE,
-    game_location INT
 );
 
 -- Create 'Team' Table
 CREATE TABLE team (
     id SERIAL PRIMARY KEY,
     city VARCHAR(255),
-    tname VARCHAR(255)
+    mascot VARCHAR(255)
 );
 
 -- Create 'Score' Table
@@ -61,6 +60,7 @@ CREATE TABLE stat (
     rebounds INT,
     assists INT,
     blocks INT,
+    steals INT,
     minutes_played INT,
     FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE,
     FOREIGN KEY (game_id) REFERENCES game(id) ON DELETE CASCADE
